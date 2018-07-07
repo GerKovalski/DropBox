@@ -4,10 +4,12 @@ import commonThings.API;
 import commonThings.Const;
 import commonThings.commonFunctions;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.Socket;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.file.Files;
 import java.util.Vector;
 
 
@@ -34,19 +36,13 @@ public class Connection implements API, Const {
                             if (request instanceof String) {
                                 String msg = request.toString();
                                if (msg.startsWith(AUTH_SUCCESSFUL)) {
-                                   window.clearLoginField();
+                                   window.changePaneToMain();
                                    sendMessage(REQUEST_FOR_FILES + " " + login);
                                    break;
                                 }
                             }
                         }
-                        while (true) {
-                            request = in.readObject();
-                            if (request instanceof Vector) {
-                                Vector<String> fileList = (Vector)request;
-                                showFileList(fileList, window);
-                            }
-                        }
+                        downloadFile(window);
                     } catch (ClassNotFoundException e) {
                         e.printStackTrace();
                     }
@@ -61,10 +57,6 @@ public class Connection implements API, Const {
 
     }
 
-    private void showFileList(Vector<String> fileList, GUI window) {
-        window.showFileList(fileList);
-    }
-
     public void auth(String login, String password) {
         try {
             this.login = login;
@@ -77,5 +69,52 @@ public class Connection implements API, Const {
 
     public void sendMessage(String msg) {
         commonFunctions.sendMessage(msg, out);
+    }
+
+    public void sendFile(File file) {
+        try {
+            Object[] objects = new Object[2];
+            objects[0] = file.getName();
+            byte[] content = Files.readAllBytes(file.toPath());
+            objects[1] = content;
+            out.writeObject(objects);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void downloadFile(GUI window) {
+        Object request = null;
+        while (true) {
+            try {
+                request = in.readObject();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            if (request instanceof Object[]) {
+                Object[] objects = (Object[])request;
+                String fileName = objects[0].toString();
+                byte[] content = (byte[])objects[1];
+                try {
+                    JFileChooser fileChooser = new JFileChooser();
+                    fileChooser.setDialogTitle("Выберите файл");
+                    fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                    int result = fileChooser.showSaveDialog(window);
+                    if (result == JFileChooser.APPROVE_OPTION) {
+                        File file = new File(fileChooser.getCurrentDirectory() + "/" + fileName);
+                        file.createNewFile();
+                        Files.write(file.toPath(), content);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (request instanceof Vector) {
+                Vector<String> fileList = (Vector)request;
+                window.showFileList(fileList);
+            }
+        }
     }
 }

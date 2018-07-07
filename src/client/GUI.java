@@ -1,64 +1,103 @@
 package client;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.Vector;
 
 import static commonThings.API.DELETE_FILE;
+import static commonThings.API.DOWNLOAD_FILE;
 
 public class GUI extends JFrame {
     private JTree fileList;
-    private JScrollPane centerScrollPane;
+    private JLabel corgi;
     private JPanel center;
     private JButton upload;
     private JButton delete;
+    private JButton download;
     private JPanel down;
-    private JTextField jTextField;
-    private JPanel up;
+    private JPanel logPassField;
+    private JPanel loginPanel;
     private JTextField loginField;
     private JPasswordField passwordField;
     private JButton signIn;
     private Connection connection;
     private String login;
+    private JPanel mainPanel;
 
     public GUI() {
+        super("CorgiCloudService");
+
         connection = new Connection();
         connection.init(this);
 
-        setTitle("DropBox");
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setSize(400,400);
         setLocationRelativeTo(null);
         setResizable(false);
+        setSize(300,370);
 
-        up = new JPanel(new GridLayout(1,3));
+        logPassField = new JPanel(new GridLayout(1,3));
+        loginPanel = new JPanel();
         loginField = new JTextField();
         passwordField = new JPasswordField();
-        signIn = new JButton("Login");
-        up.add(loginField);
-        up.add(passwordField);
-        up.add(signIn);
-        up.setVisible(true);
-        add(up, BorderLayout.NORTH);
+        loginPanel.setBackground(Color.WHITE);
 
-        down = new JPanel(new GridLayout(1,2));
-        delete = new JButton("Delete");
-        upload = new JButton("Upload");
-        down.add(delete);
-        down.add(upload);
-        down.setVisible(true);
-        add(down, BorderLayout.SOUTH);
-
-        center = new JPanel(new GridLayout(1,1));
-        center.setVisible(false);
-        add(center, BorderLayout.CENTER);
-
+        try {
+            corgi = new JLabel(new ImageIcon(ImageIO.read(new File(
+                    "/Users/fima/Desktop/GeekBrains/DropBox/src/client/Resource/corgi.jpg"
+            )).getScaledInstance(300, 300, Image.SCALE_SMOOTH)));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        signIn = new JButton("Sign in");
+        loginPanel.add(corgi, BorderLayout.NORTH);
+        logPassField.add(loginField);
+        logPassField.add(passwordField);
+        logPassField.add(signIn);
+        loginPanel.add(logPassField, BorderLayout.SOUTH);
+        setContentPane(loginPanel);
         setVisible(true);
 
-        signIn.addActionListener(e -> sendAuthData());
 
-        delete.addActionListener(e -> sendMessage(DELETE_FILE + " " + login + " " + fileList.getSelectionPath().getLastPathComponent().toString()));
-    }
+        down = new JPanel(new GridLayout(3,1));
+        delete = new JButton("Delete");
+        upload = new JButton("Upload");
+        download = new JButton("Download");
+        down.add(delete);
+        down.add(upload);
+        down.add(download);
+
+        center = new JPanel(new GridLayout(1,1));
+        center.setSize(new Dimension(300,300));
+
+        mainPanel = new JPanel();
+        mainPanel.add(center, BorderLayout.WEST);
+        mainPanel.add(down, BorderLayout.EAST);
+        mainPanel.setVisible(true);
+
+        delete.addActionListener(e -> sendMessage(DELETE_FILE + " "
+                + login + " " + fileList.getSelectionPath().getLastPathComponent().toString()));
+
+        upload.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Выберите файл");
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                sendFile(fileChooser.getSelectedFile());
+            }
+        });
+
+        download.addActionListener(e -> {
+            sendMessage(DOWNLOAD_FILE + " " + login + " " + fileList.getSelectionPath().getLastPathComponent().toString());
+        });
+        signIn.addActionListener(e -> sendAuthData());
+        }
     public void sendAuthData() {
         login = loginField.getText();
         connection.auth(login, String.valueOf(passwordField.getPassword()));
@@ -74,15 +113,16 @@ public class GUI extends JFrame {
         center.setVisible(true);
     }
 
-    public void clearLoginField() {
-        up.removeAll();
-        jTextField = new JTextField("Ваша директория на сервере");
-        jTextField.setEditable(false);
-        jTextField.setHorizontalAlignment(SwingConstants.CENTER);
-        up.add(jTextField);
+    public void changePaneToMain() {
+        setSize(300, 450);
+        setContentPane(mainPanel);
     }
 
     public void sendMessage(String msg) {
         connection.sendMessage(msg);
+    }
+
+    public void sendFile(File file) {
+        connection.sendFile(file);
     }
 }

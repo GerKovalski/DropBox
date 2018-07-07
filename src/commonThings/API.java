@@ -6,5 +6,5 @@ public interface API {
     String AUTH = "/2";
     String REQUEST_FOR_FILES = "/3";
     String DELETE_FILE = "/4";
-
+    String DOWNLOAD_FILE = "/5";
 }

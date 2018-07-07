@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.Vector;
 
@@ -18,6 +19,7 @@ public class Clients implements API {
     commonFunctions commonFunctions;
     private String login;
     private Vector<File> filesList;
+    private String clientPath;
 
     public Clients(ServerCore server, Socket socket) {
         try {
@@ -48,6 +50,11 @@ public class Clients implements API {
                         if (tmp != null) {
                             System.out.println("Клиент " + elements[1] + " прошел аутентификацию!");
                             commonFunctions.sendMessage(AUTH_SUCCESSFUL, out);
+                            login = msg.split(" ")[1];
+                            clientPath = PATH + login;
+                            if (!new File(clientPath).exists()) {
+                                new File(clientPath).mkdir();
+                            }
                             break;
                         }
                     }
@@ -63,25 +70,35 @@ public class Clients implements API {
                 }
                 if (request instanceof String) {
                     String msg = request.toString();
-                    if (msg.startsWith(REQUEST_FOR_FILES) || msg.startsWith(DELETE_FILE)) {
-                        login = msg.split(" ")[1];
+                    if (msg.startsWith(REQUEST_FOR_FILES) || msg.startsWith(DELETE_FILE) || msg.startsWith(DOWNLOAD_FILE)) {
                         if (msg.startsWith(DELETE_FILE)) {
-                            new File(PATH + login + "/" + msg.split(" ")[2]).delete();
+                            new File(clientPath + "/" + msg.split(" ")[2]).delete();
                         }
-                        File userDir = new File(PATH + login);
-                        filesList.clear();
-                        for (File file : userDir.listFiles()) {
-                            filesList.add(file);
+                        if (msg.startsWith(DOWNLOAD_FILE)) {
+                            sendFile(new File(clientPath + "/" + msg.split(" ")[2]));
                         }
-                        Collections.sort(filesList);
-                        sendFiles(filesList, out);
+                        collFiles();
+                    }
+                }
+                if (request instanceof Object[]) {
+                    Object[] objects = (Object[])request;
+                    String fileName = objects[0].toString();
+                    byte[] content = (byte[])objects[1];
+                    try {
+                        File file = new File(clientPath + "/" + fileName);
+                        System.out.println(file.toPath().toString());
+                        file.createNewFile();
+                        Files.write(file.toPath(), content);
+                        collFiles();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
             }
         }).start();
     }
 
-    public void sendFiles(Vector<File> files_list, ObjectOutputStream out) {
+    public void sendFilesList(Vector<File> files_list, ObjectOutputStream out) {
         Vector<String> names = new Vector<>();
         for (File file : files_list) {
             names.add(file.getName());
@@ -93,4 +110,28 @@ public class Clients implements API {
             e.printStackTrace();
         }
     }
+
+    public void sendFile(File file) {
+        try {
+            Object[] objects = new Object[2];
+            objects[0] = file.getName();
+            byte[] content = Files.readAllBytes(file.toPath());
+            objects[1] = content;
+            out.writeObject(objects);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void collFiles() {
+        File userDir = new File(PATH + login);
+        filesList.clear();
+        for (File file : userDir.listFiles()) {
+            filesList.add(file);
+        }
+        Collections.sort(filesList);
+        sendFilesList(filesList, out);
+    }
+
+
 }
