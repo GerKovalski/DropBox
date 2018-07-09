@@ -75,7 +75,7 @@ public class Clients implements API {
                             new File(clientPath + "/" + msg.split(" ")[2]).delete();
                         }
                         if (msg.startsWith(DOWNLOAD_FILE)) {
-                            sendFile(new File(clientPath + "/" + msg.split(" ")[2]));
+                            commonFunctions.sendFile(new File(clientPath + "/" + msg.split(" ")[2]), out);
                         }
                         collFiles();
                     }
@@ -106,18 +106,6 @@ public class Clients implements API {
         try {
             out.writeObject(names);
             out.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void sendFile(File file) {
-        try {
-            Object[] objects = new Object[2];
-            objects[0] = file.getName();
-            byte[] content = Files.readAllBytes(file.toPath());
-            objects[1] = content;
-            out.writeObject(objects);
         } catch (IOException e) {
             e.printStackTrace();
         }

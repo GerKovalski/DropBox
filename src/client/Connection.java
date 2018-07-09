@@ -71,18 +71,6 @@ public class Connection implements API, Const {
         commonFunctions.sendMessage(msg, out);
     }
 
-    public void sendFile(File file) {
-        try {
-            Object[] objects = new Object[2];
-            objects[0] = file.getName();
-            byte[] content = Files.readAllBytes(file.toPath());
-            objects[1] = content;
-            out.writeObject(objects);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public void downloadFile(GUI window) {
         Object request = null;
         while (true) {

@@ -3,12 +3,11 @@ package client;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.Vector;
+import commonThings.commonFunctions;
 
 import static commonThings.API.DELETE_FILE;
 import static commonThings.API.DOWNLOAD_FILE;
@@ -29,12 +28,14 @@ public class GUI extends JFrame {
     private Connection connection;
     private String login;
     private JPanel mainPanel;
+    private commonFunctions commonFunctions;
 
     public GUI() {
         super("CorgiCloudService");
 
         connection = new Connection();
         connection.init(this);
+        commonFunctions = new commonFunctions();
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -49,7 +50,7 @@ public class GUI extends JFrame {
 
         try {
             corgi = new JLabel(new ImageIcon(ImageIO.read(new File(
-                    "/Users/fima/Desktop/GeekBrains/DropBox/src/client/Resource/corgi.jpg"
+                    "/Users/fima/Desktop/GeekBrains/DropBox/src/client/Resources/corgi.jpg"
             )).getScaledInstance(300, 300, Image.SCALE_SMOOTH)));
         } catch (IOException e) {
             e.printStackTrace();
@@ -64,7 +65,7 @@ public class GUI extends JFrame {
         setVisible(true);
 
 
-        down = new JPanel(new GridLayout(3,1));
+        down = new JPanel(new GridLayout(1,3));
         delete = new JButton("Delete");
         upload = new JButton("Upload");
         download = new JButton("Download");
@@ -76,12 +77,16 @@ public class GUI extends JFrame {
         center.setSize(new Dimension(300,300));
 
         mainPanel = new JPanel();
-        mainPanel.add(center, BorderLayout.WEST);
-        mainPanel.add(down, BorderLayout.EAST);
+        mainPanel.add(center, BorderLayout.CENTER);
+        mainPanel.add(down, BorderLayout.SOUTH);
         mainPanel.setVisible(true);
 
-        delete.addActionListener(e -> sendMessage(DELETE_FILE + " "
-                + login + " " + fileList.getSelectionPath().getLastPathComponent().toString()));
+        delete.addActionListener(e -> {
+            if (fileList.getSelectionPath() != null) {
+                sendMessage(DELETE_FILE + " "
+                        + login + " " + fileList.getSelectionPath().getLastPathComponent().toString());
+            }
+        });
 
         upload.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -89,12 +94,14 @@ public class GUI extends JFrame {
             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
             int result = fileChooser.showOpenDialog(this);
             if (result == JFileChooser.APPROVE_OPTION) {
-                sendFile(fileChooser.getSelectedFile());
+                sendFile(fileChooser.getSelectedFile(), connection.out);
             }
         });
 
         download.addActionListener(e -> {
-            sendMessage(DOWNLOAD_FILE + " " + login + " " + fileList.getSelectionPath().getLastPathComponent().toString());
+            if (fileList.getSelectionPath() != null) {
+                sendMessage(DOWNLOAD_FILE + " " + login + " " + fileList.getSelectionPath().getLastPathComponent().toString());
+            }
         });
         signIn.addActionListener(e -> sendAuthData());
         }
@@ -108,8 +115,17 @@ public class GUI extends JFrame {
     public void showFileList(Vector<String> files) {
         center.setVisible(false);
         center.removeAll();
-        fileList = new JTree(files);
-        center.add(new JScrollPane(fileList, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+        if (!files.isEmpty()) {
+            fileList = new JTree(files);
+            center.add(new JScrollPane(fileList, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+        } else {
+            JTextArea jTextArea = new JTextArea("Ваша директория пока пуста.");
+            jTextArea.setEditable(false);
+            jTextArea.setBackground(null);
+            jTextArea.setSelectedTextColor(null);
+            jTextArea.setSelectionColor(null);
+            center.add(jTextArea, BorderLayout.CENTER);
+        }
         center.setVisible(true);
     }
 
@@ -122,7 +138,7 @@ public class GUI extends JFrame {
         connection.sendMessage(msg);
     }
 
-    public void sendFile(File file) {
-        connection.sendFile(file);
+    public void sendFile(File file, ObjectOutputStream out) {
+        commonFunctions.sendFile(file, out);
     }
 }
